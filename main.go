@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +20,8 @@ func main() {
 
 	// 2. Start Gin
 	r := gin.Default()
+
+	r.Static("/images", "./public/images")
 
 	// GET /products with optional query: ?search=term&sort=price_asc&page=1&pageSize=10
 	r.GET("/products", func(c *gin.Context) {
@@ -63,21 +68,46 @@ func main() {
 		c.JSON(http.StatusOK, products)
 	})
 
-	// POST /products
+	// POST /products (multipart form: fields + image)
 	r.POST("/products", func(c *gin.Context) {
-		var newProd Product
-		if err := c.ShouldBindJSON(&newProd); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		file, err := c.FormFile("image")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Image is required"})
+			return
+		}
+
+		// Save image to disk
+		ext := filepath.Ext(file.Filename)
+		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+		path := filepath.Join("public/images", filename)
+		err = c.SaveUploadedFile(file, path)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+			return
+		}
+
+		imageURL := "/images/" + filename
+
+		name := c.PostForm("name")
+		typeVal := c.PostForm("type")
+		priceStr := c.PostForm("price")
+		description := c.PostForm("description")
+
+		price, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price format"})
 			return
 		}
 
 		query := `INSERT INTO products (name, type, price, description, picture_url) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-		err := db.QueryRow(query, newProd.Name, newProd.Type, newProd.Price, newProd.Description, newProd.PictureURL).Scan(&newProd.ID)
+		var id int
+		err = db.QueryRow(query, name, typeVal, price, description, imageURL).Scan(&id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusCreated, newProd)
+
+		c.JSON(http.StatusCreated, gin.H{"id": id, "picture_url": imageURL})
 	})
 
 	// PUT /products/:id

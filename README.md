@@ -15,11 +15,23 @@ cd thales_backend
 
 ```
 
-1. Build and start the containers
+1. Build containers
 
 ```bash
-docker-compose up -d --build
+docker-compose build
 ```
+2. Start the database and run migrations
 
-2. (Important) Might need to run migration again after DB is ready
-   ⚠️ On the first run, the migration container may start before the database is ready.
+```bash
+  
+  
+docker-compose up -d db
+docker-compose run --rm migrate
+```
+3. Start the backend
+
+```bash
+  
+docker-compose up -d backend
+
+```

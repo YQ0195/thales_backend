@@ -10,7 +10,8 @@ This guide will help you run the Thales backend project locally using Docker.
 - Clone this repository
 
 ```bash
-git clone https://github.com/your-username/thales_backend.git
+git clone this repository
+```
 cd thales_backend
 
 ```

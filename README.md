@@ -11,10 +11,10 @@ This guide will help you run the Thales backend project locally using Docker.
 
 ```bash
 git clone this repository
-```
-cd thales_backend
 
+cd thales_backend
 ```
+
 
 1. Build containers
 
@@ -24,15 +24,11 @@ docker-compose build
 2. Start the database and run migrations
 
 ```bash
-  
-  
 docker-compose up -d db
 docker-compose run --rm migrate
 ```
 3. Start the backend
 
 ```bash
-  
 docker-compose up -d backend
-
 ```

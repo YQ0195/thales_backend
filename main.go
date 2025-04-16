@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -163,26 +164,45 @@ func main() {
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "deleted"})
 	})
+
 	// PUT /products/:id/with-image - update with new image
 	r.PUT("/products/:id/with-image", func(c *gin.Context) {
 		id := c.Param("id")
+
+		// Step 1: Get the current image path from DB
+		var oldImage string
+		err := db.Get(&oldImage, "SELECT picture_url FROM products WHERE id=$1", id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+			return
+		}
+
+		// Step 2: Save new image
 		file, err := c.FormFile("image")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Image is required"})
 			return
 		}
 
-		// Save new image
 		ext := filepath.Ext(file.Filename)
 		filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 		path := filepath.Join("public/images", filename)
+
 		if err := c.SaveUploadedFile(file, path); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save new image"})
 			return
 		}
 		imageURL := "/images/" + filename
 
-		// Collect form fields
+		// Step 3: Delete old image file if it exists and is not empty
+		if oldImage != "" {
+			oldImagePath := filepath.Join("public", oldImage)
+			if _, err := os.Stat(oldImagePath); err == nil {
+				_ = os.Remove(oldImagePath)
+			}
+		}
+
+		// Step 4: Update DB with new fields
 		name := c.PostForm("name")
 		typeVal := c.PostForm("type")
 		priceStr := c.PostForm("price")
@@ -194,7 +214,6 @@ func main() {
 			return
 		}
 
-		// Update DB
 		query := `UPDATE products SET name=$1, type=$2, price=$3, description=$4, picture_url=$5 WHERE id=$6`
 		_, err = db.Exec(query, name, typeVal, price, description, imageURL, id)
 		if err != nil {

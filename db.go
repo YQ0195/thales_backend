@@ -4,15 +4,22 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"os"
 )
 
 // initDB connects to Postgres and returns a *sqlx.DB.
 func initDB() (*sqlx.DB, error) {
 	// Update these creds as needed:
-	user, pass, host, port, name := "user", "pass", "localhost", 5432, "productsdb"
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		user, pass, host, port, name,
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname,
 	)
+
 	return sqlx.Connect("postgres", dsn)
 }

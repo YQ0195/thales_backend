@@ -21,6 +21,23 @@ services:
       - "-path=/migrations"
       - "-database=postgres://user:pass@db:5432/productsdb?sslmode=disable"
       - "up"
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./public/images:/app/public/images
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=user
+      - DB_PASSWORD=pass
+      - DB_NAME=productsdb
 
 volumes:
   db_data:
+  images_data:
